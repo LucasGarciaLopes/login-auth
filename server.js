@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
+const bcrypt = require('bcrypt');
 const db = require('./database');
-db.get("SELECT name FROM sqlite_master WHERE type='table'", [], () => {});
 
 const app = express();
 
@@ -12,17 +12,19 @@ app.use(express.static('frontend'));
 /* =========================
    REGISTRO DE USUÁRIO
 ========================= */
-app.post('/register', (req, res, next) => {
+app.post('/register', async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
+    const hashedPassword = await bcrypt.hash(password, 10);
+
     db.run(
       `INSERT INTO users (email, password) VALUES (?, ?)`,
-      [email, password],
+      [email, hashedPassword],
       function (err) {
         if (err) return next(err);
 
-        res.json({ message: 'Usuário criado', userId: this.lastID });
+        res.json({ message: 'Usuário criado com sucesso' });
       }
     );
   } catch (e) {
@@ -37,12 +39,15 @@ app.post('/login', (req, res) => {
   const { email, password } = req.body;
 
   db.get(
-    `SELECT * FROM users WHERE email = ? AND password = ?`,
-    [email, password],
-    (err, user) => {
+    `SELECT * FROM users WHERE email = ?`,
+    [email],
+    async (err, user) => {
       if (err) return res.status(500).json(err);
+      if (!user) return res.status(401).json({ error: 'Credenciais inválidas' });
 
-      if (!user) {
+      const match = await bcrypt.compare(password, user.password);
+
+      if (!match) {
         return res.status(401).json({ error: 'Credenciais inválidas' });
       }
 
@@ -55,11 +60,11 @@ app.post('/login', (req, res) => {
    CRIAR TASK
 ========================= */
 app.post('/tasks', (req, res) => {
-  const { title, user_id } = req.body;
+  const { title, userId } = req.body;
 
   db.run(
     `INSERT INTO tasks (title, completed, user_id) VALUES (?, 0, ?)`,
-    [title, user_id],
+    [title, userId],
     function (err) {
       if (err) return res.status(500).json(err);
 
@@ -84,8 +89,9 @@ app.get('/tasks/:userId', (req, res) => {
     }
   );
 });
+
 /* =========================
-   ATUALIZAR TASK (CONCLUIR)
+   ATUALIZAR TASK (COMPLETAR)
 ========================= */
 app.put('/tasks/:id', (req, res) => {
   const id = req.params.id;
@@ -101,6 +107,7 @@ app.put('/tasks/:id', (req, res) => {
     }
   );
 });
+
 /* =========================
    DELETAR TASK
 ========================= */
@@ -113,11 +120,15 @@ app.delete('/tasks/:id', (req, res) => {
     res.json({ message: 'Task deletada' });
   });
 });
-// CAPTURA QUALQUER ERRO DO EXPRESS
+
+/* =========================
+   ERRO GLOBAL
+========================= */
 app.use((err, req, res, next) => {
   console.error('ERRO GLOBAL:', err.stack);
   res.status(500).json({ error: err.message });
 });
+
 /* =========================
    SERVER
 ========================= */
