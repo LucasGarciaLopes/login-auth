@@ -96,14 +96,13 @@ http://localhost:3000/login.html
 ## 📸 Telas do sistema
 
 ### Login
-![Login](screenshots/login.png)
+![Login](https://raw.githubusercontent.com/LucasGarciaLopes/login-auth/main/screenshots/login.png)
 
 ### Registro
-![Registro](screenshots/register.png)
+![Registro](https://raw.githubusercontent.com/LucasGarciaLopes/login-auth/main/screenshots/register.png)
 
 ### Dashboard
-![Dashboard](screenshots/dashboard.png)
-
+![Dashboard](https://raw.githubusercontent.com/LucasGarciaLopes/login-auth/main/screenshots/dashboard.png)
 ---
 
 ## 🌍 Deploy
