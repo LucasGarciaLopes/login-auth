@@ -1,6 +1,12 @@
 const sqlite3 = require('sqlite3').verbose();
 
-const db = new sqlite3.Database('./database.sqlite');
+const db = new sqlite3.Database('./database.sqlite', (err) => {
+  if (err) {
+    console.error('Erro ao abrir banco:', err.message);
+  } else {
+    console.log('Banco conectado com sucesso.');
+  }
+});
 
 db.serialize(() => {
   db.run(`
@@ -19,7 +25,13 @@ db.serialize(() => {
       user_id INTEGER,
       FOREIGN KEY(user_id) REFERENCES users(id)
     )
-  `);
+  `, (err) => {
+    if (err) {
+      console.log('Erro criando tabela tasks:', err.message);
+    } else {
+      console.log('Tabelas prontas.');
+    }
+  });
 });
 
 module.exports = db;

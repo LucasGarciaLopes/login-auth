@@ -1,28 +1,33 @@
 const express = require('express');
 const cors = require('cors');
 const db = require('./database');
+db.get("SELECT name FROM sqlite_master WHERE type='table'", [], () => {});
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use(express.static('frontend'));
 
 /* =========================
    REGISTRO DE USUÁRIO
 ========================= */
-app.post('/register', (req, res) => {
-  const { email, password } = req.body;
+app.post('/register', (req, res, next) => {
+  try {
+    const { email, password } = req.body;
 
-  db.run(
-    `INSERT INTO users (email, password) VALUES (?, ?)`,
-    [email, password],
-    function (err) {
-      if (err) {
-        return res.status(400).json({ error: 'Usuário já existe' });
+    db.run(
+      `INSERT INTO users (email, password) VALUES (?, ?)`,
+      [email, password],
+      function (err) {
+        if (err) return next(err);
+
+        res.json({ message: 'Usuário criado', userId: this.lastID });
       }
-      res.json({ message: 'Usuário criado com sucesso' });
-    }
-  );
+    );
+  } catch (e) {
+    next(e);
+  }
 });
 
 /* =========================
@@ -50,11 +55,11 @@ app.post('/login', (req, res) => {
    CRIAR TASK
 ========================= */
 app.post('/tasks', (req, res) => {
-  const { title, userId } = req.body;
+  const { title, user_id } = req.body;
 
   db.run(
     `INSERT INTO tasks (title, completed, user_id) VALUES (?, 0, ?)`,
-    [title, userId],
+    [title, user_id],
     function (err) {
       if (err) return res.status(500).json(err);
 
@@ -79,7 +84,23 @@ app.get('/tasks/:userId', (req, res) => {
     }
   );
 });
+/* =========================
+   ATUALIZAR TASK (CONCLUIR)
+========================= */
+app.put('/tasks/:id', (req, res) => {
+  const id = req.params.id;
+  const { completed } = req.body;
 
+  db.run(
+    `UPDATE tasks SET completed = ? WHERE id = ?`,
+    [completed ? 1 : 0, id],
+    (err) => {
+      if (err) return res.status(500).json(err);
+
+      res.json({ message: 'Task atualizada' });
+    }
+  );
+});
 /* =========================
    DELETAR TASK
 ========================= */
@@ -92,7 +113,11 @@ app.delete('/tasks/:id', (req, res) => {
     res.json({ message: 'Task deletada' });
   });
 });
-
+// CAPTURA QUALQUER ERRO DO EXPRESS
+app.use((err, req, res, next) => {
+  console.error('ERRO GLOBAL:', err.stack);
+  res.status(500).json({ error: err.message });
+});
 /* =========================
    SERVER
 ========================= */
